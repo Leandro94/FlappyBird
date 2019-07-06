@@ -80,8 +80,8 @@ public class Jogo extends ApplicationAdapter
 	//objetos para câmera
 	private OrthographicCamera camera;
 	private Viewport viewport;
-	private final float VIRTUAL_WIDTH = 720;
-	private final float VIRTUAL_HEIGHT = 1280;
+	private final float VIRTUAL_WIDTH = 620;
+	private final float VIRTUAL_HEIGHT = 1180;
 
 
 	//----------------------------------------------------------------------------------------------
@@ -127,7 +127,7 @@ public class Jogo extends ApplicationAdapter
 			espacoEntreCanos=300;
 			if(toqueTela)
 			{
-				gravidade=-10;
+				gravidade=-15;
 				estadoJogo=1;
 				somVoando.play();
 			}
@@ -142,7 +142,14 @@ public class Jogo extends ApplicationAdapter
 		{
 			if(toqueTela)
 			{
-				gravidade=-15;
+				if(posicaoPassaroVertical<alturaDispositivo)
+				{
+					gravidade=-15;
+				}
+				if(posicaoPassaroVertical>alturaDispositivo)
+				{
+					posicaoPassaroVertical =alturaDispositivo-50;
+				}
 				somVoando.play();
 			}
 			//MOVIMENTA CHAO
@@ -288,13 +295,15 @@ public class Jogo extends ApplicationAdapter
 		//desenha chao
 		batch.draw(chao,posicaoChaoHorizontal,0);
 		//desenha pontuacao
-		textoPontuacao.draw(batch,String.valueOf(pontos),larguraDispositivo/2, alturaDispositivo-110);
-
+		if(estadoJogo!=0)
+		{
+			textoPontuacao.draw(batch,String.valueOf(pontos),larguraDispositivo/2, alturaDispositivo-105);
+		}
 		if(estadoJogo==2)
 		{
-			batch.draw(gameOver,larguraDispositivo/2 -gameOver.getWidth()/2, alturaDispositivo/2);
-			textoReiniciar.draw(batch,"Toque para reiniciar!",larguraDispositivo/2-140, alturaDispositivo/2-gameOver.getHeight()/2);
-			textoMelhorPontuacao.draw(batch,"Seu record é: "+pontuacaoMaxima+" pontos",larguraDispositivo/2-140, alturaDispositivo/2-gameOver.getHeight());
+			batch.draw(gameOver,larguraDispositivo/2 -gameOver.getWidth()/2, alturaDispositivo/2+50);
+			textoReiniciar.draw(batch,"Retry?",larguraDispositivo/2-140, alturaDispositivo/2-gameOver.getHeight()/2+50);
+			textoMelhorPontuacao.draw(batch,"Best score: "+pontuacaoMaxima+" pontos",larguraDispositivo/2-140, alturaDispositivo/2-gameOver.getHeight()+50);
 		}
 		batch.end();
 	}
@@ -337,7 +346,7 @@ public class Jogo extends ApplicationAdapter
 				{
 					if(variacao>5)
 					{
-						variacao+=Gdx.graphics.getDeltaTime()*25;
+						variacao+=Gdx.graphics.getDeltaTime()*60;
 
 					}
 					if(variacao>13)
@@ -412,7 +421,7 @@ public class Jogo extends ApplicationAdapter
 
 		fundo = new Texture("fundo.png");
 
-		gameOver = new Texture("game_over.png");
+		gameOver = new Texture("gameover.png");
 	}
 	//------------------------------------------------------------------------------------------------
 	private void incializarObjetos()
@@ -440,17 +449,17 @@ public class Jogo extends ApplicationAdapter
 		espacoEntreCanos = 400;
 
 		//Configurações de textos
-		textoPontuacao = new BitmapFont();
+		textoPontuacao = new BitmapFont(Gdx.files.internal("font.fnt"));
 		textoPontuacao.setColor(Color.WHITE);
-		textoPontuacao.getData().setScale(8);
-
-		textoReiniciar = new BitmapFont();
-		textoReiniciar.setColor(Color.GREEN);
-		textoReiniciar.getData().setScale(2);
+		textoPontuacao.getData().setScale(2);
 
 		textoMelhorPontuacao = new BitmapFont();
 		textoMelhorPontuacao.setColor(Color.RED);
 		textoMelhorPontuacao.getData().setScale(2);
+
+		textoReiniciar = new BitmapFont();
+		textoReiniciar.setColor(Color.GREEN);
+		textoReiniciar.getData().setScale(2);
 
 		//Formas Gemometricas para colisoes
 		circuloPassaro =  new Circle();
@@ -481,12 +490,11 @@ public class Jogo extends ApplicationAdapter
 		//viewport = new FitViewport(VIRTUAL_WIDTH, VIRTUAL_HEIGHT,camera);
 	}
 	//----------------------------------------------------------------------------------------------
-
 	@Override
-	public void resize(int width, int height) {
+	public void resize(int width, int height)
+	{
 		viewport.update(width,height);
 	}
-
 	//------------------------------------------------------------------------------------------------
 	@Override
 	public void dispose ()
@@ -496,5 +504,6 @@ public class Jogo extends ApplicationAdapter
 		//Gdx.app.log("dispose","Descarte de conteudos");
 		//batch.dispose();
 		//passaros[(int)variacao].dispose();
+		batch.dispose();
 	}
 }
