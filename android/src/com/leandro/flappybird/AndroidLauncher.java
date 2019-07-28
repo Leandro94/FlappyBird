@@ -4,7 +4,6 @@ import android.os.Bundle;
 
 import com.badlogic.gdx.backends.android.AndroidApplication;
 import com.badlogic.gdx.backends.android.AndroidApplicationConfiguration;
-import com.leandro.flappybird.Jogo;
 
 public class AndroidLauncher extends AndroidApplication
 {
@@ -13,6 +12,6 @@ public class AndroidLauncher extends AndroidApplication
     {
 		super.onCreate(savedInstanceState);
 		AndroidApplicationConfiguration config = new AndroidApplicationConfiguration();
-		initialize(new Jogo(), config);
+		initialize(new Aplicacao(), config);
 	}
 }

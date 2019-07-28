@@ -1,33 +1,51 @@
-package com.leandro.flappybird;
+package com.leandro.flappybird.screens;
 
-import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Preferences;
+import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
-import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.graphics.g2d.GlyphLayout;
+import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.math.Circle;
 import com.badlogic.gdx.math.Intersector;
 import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.ui.Image;
+import com.badlogic.gdx.scenes.scene2d.ui.ImageButton;
 import com.badlogic.gdx.utils.viewport.StretchViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
+import com.leandro.flappybird.Aplicacao;
 
+import org.w3c.dom.css.Rect;
+
+import java.awt.Paint;
 import java.util.Random;
 
-public class Jogo extends ApplicationAdapter
+import static com.badlogic.gdx.scenes.scene2d.actions.Actions.alpha;
+import static com.badlogic.gdx.scenes.scene2d.actions.Actions.fadeIn;
+import static com.badlogic.gdx.scenes.scene2d.actions.Actions.fadeOut;
+import static com.badlogic.gdx.scenes.scene2d.actions.Actions.parallel;
+import static com.badlogic.gdx.scenes.scene2d.actions.Actions.sequence;
+
+public class GameScreen implements Screen
 {
+    private Stage stage;
+
     //texturas
-	private SpriteBatch batch;
 	private Texture[] passaros;
 	private Texture fundo;
+	private Image imgFundo;
 	private Texture[] canoBaixo;
 	private Texture[] canoTopo;
 	private Texture gameOver;
+	private Texture retry;
+	private Image imgBotaoRetry;
+	private Texture ready;
 	private Texture chao;
 
 	//atributos de configurações
@@ -49,20 +67,14 @@ public class Jogo extends ApplicationAdapter
     private boolean passouCano =false;
     private int estadoJogo =0;
 	private boolean toqueTela=false;
-	private float tempoInclinarPassaro=0;
 	private int contadorFlutuacaoPassaroSubir =0;
 	private int contadorFlutuacaoPassaroDescer =0;
+	private boolean colidiu=false;
 
     private float posicaoPassaroHorizontal =0;
 	private float posicaoPassaroVertical;
 
-    //exibição de pontuação
-	BitmapFont textoPontuacao;
-	BitmapFont textoReiniciar;
-	BitmapFont textoMelhorPontuacao;
-
 	//Formas para colisao
-	private ShapeRenderer shapeRenderer;
 	private Circle circuloPassaro;
 	private Rectangle retanguloCanoTopo;
 	private Rectangle retanguloCanoBaixo;
@@ -72,7 +84,6 @@ public class Jogo extends ApplicationAdapter
 	private Sound somVoando;
 	private Sound somColisao;
 	private Sound somPontuacao;
-	private Sound musicaFundo;
 
 	//objeto para salvar pontuação
 	Preferences preferencias;
@@ -80,23 +91,34 @@ public class Jogo extends ApplicationAdapter
 	//objetos para câmera
 	private OrthographicCamera camera;
 	private Viewport viewport;
-	private final float VIRTUAL_WIDTH = 620;
-	private final float VIRTUAL_HEIGHT = 1180;
+
+	private Aplicacao app;
 
 
-	//----------------------------------------------------------------------------------------------
+	public GameScreen(Aplicacao app)
+	{
+		this.app = app;
+		this.stage =  new Stage(new StretchViewport(Aplicacao.VIRTUAL_WIDHT, Aplicacao.VIRTUAL_HEIGHT,app.orthographicCamera));
+		//this.shapeRenderer = new ShapeRenderer();
+	}
+
+	private void update(float delta)
+	{
+		stage.act(delta);
+
+	}
 	@Override
-	public void create ()
+	public void show()
 	{
 		inicializarTexturas();
 		incializarObjetos();
+		stage.clear();
+        stage.addAction(sequence(alpha(0), parallel(fadeIn(0.8f))));
 	}
-	//----------------------------------------------------------------------------------------------
+
 	@Override
-	public void render ()
+	public void render(float delta)
 	{
-		//Limpar frames anteriores
-		//Gdx.gl.glClearColor(0, 0, 0, 1);
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
 
 		verificarEstadoJogo();
@@ -104,6 +126,8 @@ public class Jogo extends ApplicationAdapter
 		desenharTexturas();
 		animarPassaro();
 		detectarColisoes();
+
+		update(delta);
 	}
 	//----------------------------------------------------------------------------------------------
 	private void verificarEstadoJogo()
@@ -120,14 +144,12 @@ public class Jogo extends ApplicationAdapter
 				posicaoChaoHorizontal=0;
 			}
 		}
-
-
 		if(estadoJogo ==0)
 		{
-			espacoEntreCanos=300;
 			if(toqueTela)
 			{
-				gravidade=-15;
+                espacoEntreCanos=400;
+				gravidade=-13;
 				estadoJogo=1;
 				somVoando.play();
 			}
@@ -140,11 +162,12 @@ public class Jogo extends ApplicationAdapter
 		}
 		else if(estadoJogo==1)
 		{
+			//app.musicaFundo.stop();
 			if(toqueTela)
 			{
 				if(posicaoPassaroVertical<alturaDispositivo)
 				{
-					gravidade=-15;
+					gravidade=-13;
 				}
 				if(posicaoPassaroVertical>alturaDispositivo)
 				{
@@ -182,13 +205,11 @@ public class Jogo extends ApplicationAdapter
 			{
 				posicaoPassaroVertical = posicaoPassaroVertical - gravidade;
 			}
-
-			gravidade++;
-
+			gravidade+=0.9f;
 		}
 		else if(estadoJogo==2)
 		{
-			espacoEntreCanos=300;
+			//app.musicaFundo.play();
 			// FAZ O PASSARO CAIR APÓS BATER. PRIMEIRA FORMA DE FAZER:
 			//APLICA GRAVIDADE NO PASSARO:
 			if(posicaoPassaroVertical >chao.getHeight() || toqueTela)
@@ -199,7 +220,7 @@ public class Jogo extends ApplicationAdapter
             {
                 posicaoPassaroVertical = chao.getHeight()+1;
             }
-			gravidade++;
+			gravidade+=0.9f;
 			Gdx.app.log("XXX","gravidade: "+Gdx.graphics.getDeltaTime());
 
 			if(pontos>pontuacaoMaxima)
@@ -207,21 +228,39 @@ public class Jogo extends ApplicationAdapter
 				pontuacaoMaxima = pontos;
 				preferencias.putInteger("pontuacaoMaximo",pontuacaoMaxima);
 			}
-			//faz o passaro sair para o lado quando morre
-			//posicaoPassaroHorizontal -= Gdx.graphics.getDeltaTime()*500;
+			if(colidiu==true)
+			{
+				//faz o passaro sair para o lado quando morre
+				posicaoPassaroHorizontal -= Gdx.graphics.getDeltaTime()*500;
+			}
 
 			if(toqueTela)
 			{
-				estadoJogo=0;
-				pontos=0;
-				gravidade=2;
-				posicaoPassaroHorizontal =0;
-				posicaoPassaroVertical = alturaDispositivo/2;
-				posicaoCanoHorizontal[0] = larguraDispositivo+30;
-				posicaoCanoHorizontal[1] = posicaoCanoHorizontal[0]+400;
-				posicaoCanoHorizontal[2] = posicaoCanoHorizontal[1]+400;
-			}
+                //if((Gdx.input.getX()>= imgBotaoRetry.getOriginX() && Gdx.input.getX()<= imgBotaoRetry.getWidth()+ imgBotaoRetry.getWidth()/2) &&
+				//		(Gdx.input.getY()>=alturaDispositivo/2+gameOver.getHeight()+10- imgBotaoRetry.getHeight() && Gdx.input.getY()<=alturaDispositivo/2+gameOver.getHeight()+10+ imgBotaoRetry.getHeight()/ imgBotaoRetry.getOriginY()))
+				//{
+					/*System.out.println("xxx if X "+Gdx.input.getX());
+					System.out.println("  xxx if Y "+Gdx.input.getY());
+					System.out.println("xxx bounds wi "+imgBotaoRetry.getWidth());
+					System.out.println("xxx bounds hei "+imgBotaoRetry.getHeight());
+					System.out.println("xxx origin hei "+imgBotaoRetry.getOriginY());
+					System.out.println("xxx origin wi "+imgBotaoRetry.getOriginX());
+					System.out.println("xxx y "+imgBotaoRetry.getY());*/
+					colidiu=false;
+					estadoJogo=0;
+					pontos=0;
+					gravidade=2;
+					posicaoPassaroHorizontal =0;
+					posicaoPassaroVertical = alturaDispositivo/2+20;
+					posicaoCanoHorizontal[0] = larguraDispositivo+50;
+					posicaoCanoHorizontal[1] = posicaoCanoHorizontal[0]+400;
+					posicaoCanoHorizontal[2] = posicaoCanoHorizontal[1]+400;
+					//app.musicaFundo.stop();
 
+					stage.addAction(sequence(alpha(1f),parallel(fadeOut(0.05f)),parallel(fadeIn(0.05f))));
+					imgBotaoRetry.remove();
+				//}
+			}
 		}
 	}
 	//----------------------------------------------------------------------------------------------
@@ -231,7 +270,7 @@ public class Jogo extends ApplicationAdapter
 		boolean colidiuCanoBaixo =false;
 		boolean colidiuChao = false;
 		retanguloChao.set(posicaoChaoHorizontal,0,chao.getWidth(),chao.getHeight());
-		circuloPassaro.set(50+ posicaoPassaroHorizontal +passaros[0].getWidth()/2, posicaoPassaroVertical +passaros[0].getHeight()/2,passaros[0].getWidth()/2);
+		circuloPassaro.set(120+ posicaoPassaroHorizontal +passaros[0].getWidth()/2, posicaoPassaroVertical +passaros[0].getHeight()/2,passaros[0].getWidth()/2);
 		for(int i=0; i<canoTopo.length;i++)
 		{
 			retanguloCanoTopo.set(posicaoCanoHorizontal[i],alturaDispositivo/2+espacoEntreCanos/2+ posicaoCanoVertical[i],canoTopo[i].getWidth(),canoTopo[i].getHeight());
@@ -244,12 +283,12 @@ public class Jogo extends ApplicationAdapter
 				{
 					if(estadoJogo==1)
 					{
+						colidiu=true;
 						estadoJogo=2;
 						somColisao.play();
 					}
 				}
 			}
-
 		}
 		colidiuChao = Intersector.overlaps(circuloPassaro,retanguloChao);
 		if(colidiuChao)
@@ -278,47 +317,71 @@ public class Jogo extends ApplicationAdapter
 	//-----------------------------------------------------------------------------------------------
 	private void desenharTexturas()
 	{
-		batch.setProjectionMatrix(camera.combined);
-		batch.begin();
+        imgFundo.setPosition(0,0);
+        imgFundo.setSize(larguraDispositivo,alturaDispositivo);
+        stage.addActor(imgFundo);
+        stage.draw();
+		app.batch.setProjectionMatrix(camera.combined);
+		app.batch.begin();
 		//desenha fundo
-		batch.draw(fundo,0,0,larguraDispositivo, alturaDispositivo);
+		//batch.draw(fundo,0,0,larguraDispositivo, alturaDispositivo);
+
 		//desenha passaro
-		batch.draw(passaros[(int)variacao], 50+ posicaoPassaroHorizontal, posicaoPassaroVertical);
+     	app.batch.draw(passaros[(int)variacao], 120+ posicaoPassaroHorizontal, posicaoPassaroVertical);
+
 		//desenha canos baixo
-		batch.draw(canoBaixo[0], posicaoCanoHorizontal[0],alturaDispositivo/2-canoBaixo[0].getHeight()-espacoEntreCanos/2+ posicaoCanoVertical[0]);
-		batch.draw(canoBaixo[1], posicaoCanoHorizontal[1],alturaDispositivo/2-canoBaixo[1].getHeight()-espacoEntreCanos/2+ posicaoCanoVertical[1]);
-		batch.draw(canoBaixo[2], posicaoCanoHorizontal[2],alturaDispositivo/2-canoBaixo[2].getHeight()-espacoEntreCanos/2+ posicaoCanoVertical[2]);
+		app.batch.draw(canoBaixo[0], posicaoCanoHorizontal[0],alturaDispositivo/2-canoBaixo[0].getHeight()-espacoEntreCanos/2+ posicaoCanoVertical[0]);
+		app.batch.draw(canoBaixo[1], posicaoCanoHorizontal[1],alturaDispositivo/2-canoBaixo[1].getHeight()-espacoEntreCanos/2+ posicaoCanoVertical[1]);
+		app.batch.draw(canoBaixo[2], posicaoCanoHorizontal[2],alturaDispositivo/2-canoBaixo[2].getHeight()-espacoEntreCanos/2+ posicaoCanoVertical[2]);
+
 		//desenha canos topo
-		batch.draw(canoTopo[0], posicaoCanoHorizontal[0],alturaDispositivo/2+espacoEntreCanos/2+ posicaoCanoVertical[0]);
-		batch.draw(canoTopo[1], posicaoCanoHorizontal[1],alturaDispositivo/2+espacoEntreCanos/2+ posicaoCanoVertical[1]);
-		batch.draw(canoTopo[2], posicaoCanoHorizontal[2],alturaDispositivo/2+espacoEntreCanos/2+ posicaoCanoVertical[2]);
+		app.batch.draw(canoTopo[0], posicaoCanoHorizontal[0],alturaDispositivo/2+espacoEntreCanos/2+ posicaoCanoVertical[0]);
+		app.batch.draw(canoTopo[1], posicaoCanoHorizontal[1],alturaDispositivo/2+espacoEntreCanos/2+ posicaoCanoVertical[1]);
+		app.batch.draw(canoTopo[2], posicaoCanoHorizontal[2],alturaDispositivo/2+espacoEntreCanos/2+ posicaoCanoVertical[2]);
+
 		//desenha chao
-		batch.draw(chao,posicaoChaoHorizontal,0);
-		//desenha pontuacao
+		app.batch.draw(chao,posicaoChaoHorizontal,0);
+
 		if(estadoJogo!=0)
 		{
-			textoPontuacao.draw(batch,String.valueOf(pontos),larguraDispositivo/2, alturaDispositivo-105);
+
+			app.fontPontos.draw(app.batch,String.valueOf(pontos),larguraDispositivo/2,alturaDispositivo-105);
+		}
+		else if(estadoJogo==0)
+		{
+			app.batch.draw(ready,larguraDispositivo/2 -ready.getWidth()/2, alturaDispositivo/2+200);
 		}
 		if(estadoJogo==2)
 		{
-			batch.draw(gameOver,larguraDispositivo/2 -gameOver.getWidth()/2, alturaDispositivo/2+50);
-			textoReiniciar.draw(batch,"Retry?",larguraDispositivo/2-140, alturaDispositivo/2-gameOver.getHeight()/2+50);
-			textoMelhorPontuacao.draw(batch,"Best score: "+pontuacaoMaxima+" pontos",larguraDispositivo/2-140, alturaDispositivo/2-gameOver.getHeight()+50);
+		    String bestScore = "BEST:"+pontuacaoMaxima;
+			app.batch.draw(gameOver,larguraDispositivo/2 -gameOver.getWidth()/2, alturaDispositivo/2+100);
+
+            GlyphLayout glyphLayout = new GlyphLayout();
+            glyphLayout.setText(app.font45,bestScore);
+            float larguraTexto = glyphLayout.width;
+
+            app.font45.draw(app.batch,bestScore,larguraDispositivo/2-larguraTexto/2,alturaDispositivo/2-gameOver.getHeight()+250);
+
+            app.batch.draw(retry, larguraDispositivo/2-retry.getWidth()/2,alturaDispositivo/2-gameOver.getHeight()-10);
+			//batch.draw(imgBotaoRetry,larguraDispositivo/2-retry.getWidth()/2,alturaDispositivo/2-gameOver.getHeight()-10);
+			imgBotaoRetry.setPosition(larguraDispositivo/2-retry.getWidth()/2,alturaDispositivo/2-gameOver.getHeight()-10);
+			stage.addActor(imgBotaoRetry);
 		}
-		batch.end();
+		app.batch.end();
+
 	}
 	//----------------------------------------------------------------------------------------------
 	public void validarPontos()
 	{
 		for(int i=0; i<canoTopo.length;i++)
 		{
-			if(posicaoCanoHorizontal[i] <50-passaros[0].getWidth())//passou da posicao do passaro
+			if(posicaoCanoHorizontal[i] <120-passaros[0].getWidth())//passou da posicao do passaro
 			{
 				if(!passouCano)
 				{
 					pontos++;
 					passouCano=true;
-					if(espacoEntreCanos>100)
+					if(espacoEntreCanos>200)
 					{
 						espacoEntreCanos-=5;
 					}
@@ -335,16 +398,16 @@ public class Jogo extends ApplicationAdapter
 		if(estadoJogo!=2)
 		{
 			//VELOCIDADE QUE IRÁ ATUALIZAR A ANIMAÇÃO DO PASSARO
-			variacao+=Gdx.graphics.getDeltaTime()*10;
+			variacao+=Gdx.graphics.getDeltaTime()*15;
 			variacaoFlutuacaoPassaro+=Gdx.graphics.getDeltaTime();
 
 			//calcula a diferenca entre um render e outro
 			//Gdx.app.log("XXX","variacao: "+Gdx.graphics.getDeltaTime());
-			if(variacao>2)
+			if(variacao>3)
 			{
 				if(estadoJogo==1 && !toqueTela)
 				{
-					if(variacao>5)
+					if(variacao>7)
 					{
 						variacao+=Gdx.graphics.getDeltaTime()*60;
 
@@ -354,7 +417,7 @@ public class Jogo extends ApplicationAdapter
 						variacao=14;
 					}
 
-					//Gdx.app.log("XXX","variacao: "+variacao);
+					Gdx.app.log("XXX","variacao: "+variacao);
 				}
 				else
 				{
@@ -420,18 +483,23 @@ public class Jogo extends ApplicationAdapter
 		chao =  new Texture("chao.png");
 
 		fundo = new Texture("fundo.png");
+		imgFundo = new Image(fundo);
 
 		gameOver = new Texture("gameover.png");
+
+		retry =  new Texture("botao_retry.png");
+		imgBotaoRetry = new Image(retry);
+
+		ready =  new Texture("ready.png");
 	}
 	//------------------------------------------------------------------------------------------------
 	private void incializarObjetos()
 	{
-		batch = new SpriteBatch();
 		//larguraDispositivo =  Gdx.graphics.getWidth();
-		larguraDispositivo =  VIRTUAL_WIDTH;
+		larguraDispositivo =  Aplicacao.VIRTUAL_WIDHT;
 		//alturaDispositivo =  Gdx.graphics.getHeight();
-		alturaDispositivo =  VIRTUAL_HEIGHT;
-		posicaoPassaroVertical = alturaDispositivo/2;
+		alturaDispositivo =  Aplicacao.VIRTUAL_HEIGHT;
+		posicaoPassaroVertical = alturaDispositivo/2+20;
 
 		randomValorPrincipal = new Random();
 		randomValorSubtrair =  new Random();
@@ -448,24 +516,16 @@ public class Jogo extends ApplicationAdapter
 
 		espacoEntreCanos = 400;
 
-		//Configurações de textos
-		textoPontuacao = new BitmapFont(Gdx.files.internal("font.fnt"));
-		textoPontuacao.setColor(Color.WHITE);
-		textoPontuacao.getData().setScale(2);
+        FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal("font/press_start.ttf"));
+        FreeTypeFontGenerator.FreeTypeFontParameter parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
+        parameter.size = 16;
 
-		textoMelhorPontuacao = new BitmapFont();
-		textoMelhorPontuacao.setColor(Color.RED);
-		textoMelhorPontuacao.getData().setScale(2);
-
-		textoReiniciar = new BitmapFont();
-		textoReiniciar.setColor(Color.GREEN);
-		textoReiniciar.getData().setScale(2);
+        generator.dispose();
 
 		//Formas Gemometricas para colisoes
 		circuloPassaro =  new Circle();
 		retanguloCanoBaixo =  new Rectangle();
 		retanguloCanoTopo =  new Rectangle();
-		shapeRenderer = new ShapeRenderer();
 		retanguloChao =  new Rectangle();
 
 		//Inicializa sons
@@ -480,30 +540,72 @@ public class Jogo extends ApplicationAdapter
 
 		//Configuração da câmera
 		camera = new OrthographicCamera();
-		camera.position.set(VIRTUAL_WIDTH/2,VIRTUAL_HEIGHT/2,0);
+		camera.position.set(Aplicacao.VIRTUAL_WIDHT /2,Aplicacao.VIRTUAL_HEIGHT /2,0);
 
 		//Stretch estica
-		viewport = new StretchViewport(VIRTUAL_WIDTH, VIRTUAL_HEIGHT,camera);
+		viewport = new StretchViewport(Aplicacao.VIRTUAL_WIDHT, Aplicacao.VIRTUAL_HEIGHT,camera);
 		//preenches
 		//viewport = new FillViewport(VIRTUAL_WIDTH, VIRTUAL_HEIGHT,camera);
 		//corta as laterais para ajustar
 		//viewport = new FitViewport(VIRTUAL_WIDTH, VIRTUAL_HEIGHT,camera);
+		//iniciarBotoes();
 	}
+
+
 	//----------------------------------------------------------------------------------------------
 	@Override
 	public void resize(int width, int height)
 	{
 		viewport.update(width,height);
 	}
+
+	@Override
+	public void pause() {
+
+	}
+
+	@Override
+	public void resume() {
+
+	}
+
+	@Override
+	public void hide() {
+
+	}
+
 	//------------------------------------------------------------------------------------------------
 	@Override
 	public void dispose ()
-	{/*
-		batch.dispose();
-		img.dispose();*/
-		//Gdx.app.log("dispose","Descarte de conteudos");
-		//batch.dispose();
-		//passaros[(int)variacao].dispose();
-		batch.dispose();
+	{
+		stage.dispose();
 	}
+
+
+
+	//----------------------------------------------------------------------------------
+	//METODOS ANTIGOS
+	//----------------------------------------------------------------------------------------------
+	/*@Override
+	public void create ()
+	{
+		//this.setScreen(new SplashScreen(this));
+		inicializarTexturas();
+		incializarObjetos();
+	}
+	//----------------------------------------------------------------------------------------------
+	@Override
+	public void render ()
+	{
+		//Limpar frames anteriores
+		//Gdx.gl.glClearColor(0, 0, 0, 1);
+		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
+
+		verificarEstadoJogo();
+		validarPontos();
+		desenharTexturas();
+		animarPassaro();
+		detectarColisoes();
+	}*/
+
 }
