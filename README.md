@@ -7,4 +7,3 @@ Flappy Bird for Android written using the libGDX framework.
 * Sounds;
 * Saving the best score in XML file and more.
 
- ![Screenshot](menu.png)
